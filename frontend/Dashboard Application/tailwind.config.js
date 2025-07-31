@@ -9,6 +9,13 @@ export default {
   ],
   theme: {
     extend: {
+      zIndex: {
+        'max': '9999', // For your notification dropdown
+        'dropdown': '1000', // For dropdowns
+        'modal': '2000', // For modals
+        'tooltip': '3000', // For tooltips
+        'toast': '4000', // For toast notifications
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

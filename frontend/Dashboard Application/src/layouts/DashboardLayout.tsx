@@ -169,73 +169,92 @@ const DashboardLayout = () => {
           </div>
           <div className="flex items-center gap-4">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="relative bg-transparent text-foreground hover:bg-transparent dark:text-white"
-                  >
-                  <Bell className="h-5 w-5 text-inherit" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
-                      {unreadCount}
-                    </span>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[300px]">
-                <div className="flex items-center justify-between border-b p-2">
-                  <h2 className="font-semibold">Notifications</h2>
-                  {notifications.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-sm text-muted-foreground bg-transparent dark:text-gray-300 hover:underline"
-                    >
-                      Mark all as read
-                    </Button>
-                  )}
-                </div>
-                <div className="max-h-[300px] overflow-auto">
-                  {notifications.length === 0 ? (
-                    <div className="p-4 text-center text-muted-foreground">
-                      No notifications
-                    </div>
-                  ) : (
-                    notifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        className={cn(
-                          "flex items-start gap-2 border-b p-3 text-sm",
-                          !notification.read && "bg-muted/50"
-                        )}
-                      >
-                        <div className="flex-1">
-                          <p>{notification.message}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {!notification.read && (
-                              <Badge variant="outline" className="mr-1">
-                                New
-                              </Badge>
-                            )}
-                            Just now
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-                <div className="p-2 text-center text-sm">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-sm bg-transparent text-black hover:underline dark:text-white dark:bg-transparent"
-                  >
-                    View all notifications
-                  </Button>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button
+      variant="ghost"
+      size="icon"
+      className="relative rounded-full hover:bg-accent"
+    >
+      <Bell className="h-5 w-5" />
+      {unreadCount > 0 && (
+        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
+          {unreadCount > 9 ? "9+" : unreadCount}
+        </span>
+      )}
+    </Button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent 
+    align="end" 
+    className="w-[350px] p-0 rounded-lg border bg-popover text-popover-foreground shadow-lg"
+  >
+    <div className="flex items-center justify-between px-4 py-3 border-b">
+      <h2 className="font-semibold">Notifications</h2>
+      {unreadCount > 0 && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 text-primary hover:bg-accent hover:text-primary"
+          onClick={(e) => {
+            e.stopPropagation();
+            setNotifications(notifications.map(n => ({ ...n, read: true })));
+          }}
+        >
+          Mark all as read
+        </Button>
+      )}
+    </div>
+    
+    {notifications.length === 0 ? (
+      <div className="flex flex-col items-center justify-center p-6 text-center">
+        <Bell className="h-8 w-8 text-muted-foreground mb-2" />
+        <p className="text-sm text-muted-foreground">
+          No notifications yet
+        </p>
+      </div>
+    ) : (
+      <div className="max-h-[400px] overflow-y-auto">
+        {notifications.map((notification) => (
+          <DropdownMenuItem 
+            key={notification.id}
+            className={cn(
+              "flex flex-col items-start gap-1 p-3 border-b cursor-pointer",
+              !notification.read && "bg-accent/50",
+              "hover:bg-accent focus:bg-accent" // Add hover/focus states
+            )}
+            onClick={() => {
+              if (!notification.read) {
+                setNotifications(notifications.map(n => 
+                  n.id === notification.id ? { ...n, read: true } : n
+                ));
+              }
+            }}
+          >
+            <p className="text-sm">{notification.message}</p>
+            <div className="flex items-center gap-2 mt-1">
+              {!notification.read && (
+                <span className="h-2 w-2 rounded-full bg-primary" />
+              )}
+              <span className="text-xs text-muted-foreground">
+                Just now
+              </span>
+            </div>
+          </DropdownMenuItem>
+        ))}
+      </div>
+    )}
+    
+    <div className="p-2 border-t">
+      <Button
+        variant="ghost"
+        className="w-full text-sm hover:bg-accent hover:text-foreground"
+        onClick={() => navigate('/notifications')}
+      >
+        View all notifications
+      </Button>
+    </div>
+  </DropdownMenuContent>
+</DropdownMenu>
+
             <ModeToggle />
             <span className="hidden md:inline text-sm">{user?.name}</span>
           </div>

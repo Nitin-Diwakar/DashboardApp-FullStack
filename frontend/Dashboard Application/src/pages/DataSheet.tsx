@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   useReactTable,
@@ -91,15 +90,17 @@ const DataSheet = () => {
 
   const filteredData = useMemo(() => {
     return data.filter((row) => {
-      if (
-        row.moisture1 < moisture1Min ||
-        row.moisture1 > moisture1Max ||
-        row.moisture2 < moisture2Min ||
-        row.moisture2 > moisture2Max
-      ) {
+      // Check moisture sensor 1 range
+      if (row.moisture1 < moisture1Min || row.moisture1 > moisture1Max) {
         return false;
       }
 
+      // Check moisture sensor 2 range
+      if (row.moisture2 < moisture2Min || row.moisture2 > moisture2Max) {
+        return false;
+      }
+
+      // Check date range
       if (!dateRange?.from) return true;
 
       const start = startOfDay(dateRange.from);
@@ -216,32 +217,44 @@ const DataSheet = () => {
               </PopoverContent>
             </Popover>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-col">
+              <label htmlFor="moisture1Min">Moisture Sensor 1 Min</label>
               <Input
+                id="moisture1Min"
                 type="number"
-                placeholder="Moisture1 Min"
-                value={moisture1Min}
+                placeholder="Moisture Sensor 1 Min"
+                value={moisture1Min === 0 ? "" : moisture1Min}
                 onChange={(e) => setMoisture1Min(Number(e.target.value))}
               />
+            </div>
+            <div className="flex gap-2 flex-col">
+              <label htmlFor="moisture1Max">Moisture Sensor 1 Max</label>
               <Input
+                id="moisture1Max"
                 type="number"
-                placeholder="Max"
-                value={moisture1Max}
+                placeholder="Moisture Sensor 1 Max"
+                value={moisture1Max === 100 ? "" : moisture1Max}
                 onChange={(e) => setMoisture1Max(Number(e.target.value))}
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-col">
+              <label htmlFor="moisture2Min">Moisture Sensor 2 Min</label>
               <Input
+                id="moisture2Min"
                 type="number"
-                placeholder="Moisture2 Min"
-                value={moisture2Min}
+                placeholder="Moisture Sensor 2 Min"
+                value={moisture2Min === 0 ? "" : moisture2Min}
                 onChange={(e) => setMoisture2Min(Number(e.target.value))}
               />
+            </div>
+            <div className="flex gap-2 flex-col">
+              <label htmlFor="moisture2Max">Moisture Sensor 2 Max</label>
               <Input
+                id="moisture2Max"
                 type="number"
-                placeholder="Max"
-                value={moisture2Max}
+                placeholder="Moisture Sensor 2 Max"
+                value={moisture2Max === 100 ? "" : moisture2Max}
                 onChange={(e) => setMoisture2Max(Number(e.target.value))}
               />
             </div>
@@ -305,23 +318,23 @@ const DataSheet = () => {
           </div>
         </CardContent>
       </Card>
+      <div className="flex justify-end mt-2">
+        <Button
+          variant="ghost"
+          onClick={() => {
+            setDateRange(undefined);
+            setMoisture1Min(0);
+            setMoisture1Max(100);
+            setMoisture2Min(0);
+            setMoisture2Max(100);
+          }}
+        >
+          Clear Filters
+        </Button>
+      </div>
     </div>
   );
 };
 
 export default DataSheet;
-<div className="flex justify-end mt-2">
-  <Button
-    variant="ghost"
-    onClick={() => {
-      setDateRange(undefined);
-      setMoisture1Min(0);
-      setMoisture1Max(100);
-      setMoisture2Min(0);
-      setMoisture2Max(100);
-    }}
-  >
-    Clear Filters
-  </Button>
-</div>
 

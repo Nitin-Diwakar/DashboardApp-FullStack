@@ -8,7 +8,8 @@ import {
   ThermometerIcon,
   CloudIcon,
   PowerIcon,
-  AlertTriangleIcon
+  AlertTriangleIcon,
+  BellIcon
 } from 'lucide-react';
 import {
   LineChart,
