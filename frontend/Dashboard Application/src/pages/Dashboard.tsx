@@ -22,7 +22,8 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend
+  Legend,
+  ReferenceLine
 } from 'recharts';
 import {
   Select,
@@ -89,6 +90,8 @@ const Dashboard = () => {
   const [historicalData, setHistoricalData] = useState<FormattedSensorData[]>([]);
   const [weeklyData, setWeeklyData] = useState<FormattedSensorData[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
+  
+  // Fixed: Irrigation status based on sensor data instead of random
   const [isIrrigationActive, setIsIrrigationActive] = useState<boolean>(false);
   
   // Filter states
@@ -110,6 +113,10 @@ const Dashboard = () => {
   const dataInitialized = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Constants for irrigation control
+  const IRRIGATION_THRESHOLD = 20; // Irrigation starts when moisture1 is below 20%
+  const LOW_MOISTURE_THRESHOLD = 30; // Alert threshold
+
   // Helper function to get week number of the year
   const getWeekNumber = (date: Date): number => {
     const d = new Date(date);
@@ -128,6 +135,14 @@ const Dashboard = () => {
     return Math.ceil((dayOfMonth + offsetDay - 1) / 7);
   };
 
+  // Fixed: Update irrigation status based on soil moisture sensor 1
+  useEffect(() => {
+    if (sensorData && sensorData.moisture1 !== undefined) {
+      const shouldIrrigate = sensorData.moisture1 < IRRIGATION_THRESHOLD;
+      setIsIrrigationActive(shouldIrrigate);
+    }
+  }, [sensorData?.moisture1]);
+
   // Initial data load - separate from the refresh cycle
   useEffect(() => {
     const loadInitialData = async () => {
@@ -140,12 +155,17 @@ const Dashboard = () => {
         // Set current weather and sensor data
         setWeatherData(weather);
         const latest = sensors[sensors.length - 1];
-        setSensorData({
+        const currentSensorData = {
           moisture1: latest.sensor1,
           moisture2: latest.sensor2,
           temperature: weather.temperature,
           humidity: weather.humidity,
-        });
+        };
+        
+        setSensorData(currentSensorData);
+
+        // Set irrigation status based on moisture level
+        setIsIrrigationActive(currentSensorData.moisture1 < IRRIGATION_THRESHOLD);
 
         // Process historical data
         const formattedData = sensors.map((entry) => {
@@ -270,7 +290,6 @@ const Dashboard = () => {
           dataInitialized.current = true;
         }
         
-        setIsIrrigationActive(Math.random() > 0.7);
         setIsLoading(false);
       } catch (error) {
         console.error("Error loading data:", error);
@@ -283,7 +302,7 @@ const Dashboard = () => {
     // Set up a refresh cycle for only the live data
     const refreshInterval = setInterval(async () => {
       try {
-        // Just update current sensor values, not historical data
+        // Update current sensor values and weather
         const weather = await fetchWeatherData();
         const sensors = await fetchSensorData();
         const latest = sensors[sensors.length - 1];
@@ -292,15 +311,18 @@ const Dashboard = () => {
           ...weather
         }));
         
-        setSensorData(prev => ({
+        const updatedSensorData = {
           moisture1: latest.sensor1,
           moisture2: latest.sensor2, 
           temperature: weather.temperature,
           humidity: weather.humidity
-        }));
+        };
         
-        // Only update irrigation status
-        setIsIrrigationActive(Math.random() > 0.7);
+        setSensorData(updatedSensorData);
+        
+        // Update irrigation status based on current moisture level
+        // Note: The useEffect above will handle this automatically when sensorData updates
+        
       } catch (error) {
         console.error("Error updating sensor data:", error);
       }
@@ -448,25 +470,43 @@ const Dashboard = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <div className="flex items-center space-x-2">
-          <Badge variant={isIrrigationActive ? "default" : "outline"} className="py-1">
-            <PowerIcon className={`h-3.5 w-3.5 mr-1 ${isIrrigationActive ? "text-green-400" : ""}`} />
+          {/* Fixed: Irrigation badge now shows proper status based on moisture level */}
+          <Badge 
+            variant={isIrrigationActive ? "default" : "outline"} 
+            className={`py-1 ${isIrrigationActive ? "bg-green-600 hover:bg-green-700" : ""}`}
+          >
+            <PowerIcon className={`h-3.5 w-3.5 mr-1 ${isIrrigationActive ? "text-green-100" : ""}`} />
             Irrigation {isIrrigationActive ? "Active" : "Inactive"}
+            {isIrrigationActive && (
+              <span className="ml-1 text-xs">({sensorData.moisture1.toFixed(1)}% &lt; {IRRIGATION_THRESHOLD}%)</span>
+            )}
           </Badge>
-          {sensorData.moisture1 < 30 && (
+          
+          {/* Enhanced: Better alert logic with proper threshold */}
+          {sensorData.moisture1 < LOW_MOISTURE_THRESHOLD && (
             <Badge variant="destructive" className="py-1">
               <AlertTriangleIcon className="h-3.5 w-3.5 mr-1" />
-              Low Moisture Alert
+              Low Moisture Alert ({sensorData.moisture1.toFixed(1)}%)
             </Badge>
           )}
         </div>
       </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Soil Moisture Sensor 1 */}
-        <Card>
+        {/* Soil Moisture Sensor 1 - Enhanced with irrigation indicator */}
+        <Card className={`${isIrrigationActive ? "ring-2 ring-green-500 ring-opacity-50" : ""}`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Soil Moisture Sensor 1</CardTitle>
-            <CardDescription>Depth Embedded</CardDescription>
+            <CardTitle className="text-base font-medium">
+              Soil Moisture Sensor 1
+              {isIrrigationActive && (
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  Triggering Irrigation
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription>
+              Depth Embedded • Irrigation Threshold: {IRRIGATION_THRESHOLD}%
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <SensorGauge 
@@ -474,8 +514,20 @@ const Dashboard = () => {
               min={0} 
               max={100} 
               label="%" 
-              threshold={30}
+              threshold={IRRIGATION_THRESHOLD}
             />
+            {/* Additional status info */}
+            <div className="mt-2 text-sm text-gray-600">
+              {sensorData.moisture1 < IRRIGATION_THRESHOLD ? (
+                <span className="text-orange-600 font-medium">
+                  ⚠️ Below irrigation threshold
+                </span>
+              ) : (
+                <span className="text-green-600">
+                  ✓ Above irrigation threshold
+                </span>
+              )}
+            </div>
           </CardContent>
         </Card>
         
@@ -483,7 +535,7 @@ const Dashboard = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">Soil Moisture Sensor 2</CardTitle>
-            <CardDescription>Root Zone</CardDescription>
+            <CardDescription>Root Zone • Alert Threshold: {LOW_MOISTURE_THRESHOLD}%</CardDescription>
           </CardHeader>
           <CardContent>
             <SensorGauge 
@@ -491,7 +543,7 @@ const Dashboard = () => {
               min={0} 
               max={100} 
               label="%" 
-              threshold={30}
+              threshold={LOW_MOISTURE_THRESHOLD}
             />
           </CardContent>
         </Card>
@@ -595,6 +647,8 @@ const Dashboard = () => {
                       />
                       <Tooltip />
                       <Legend />
+                      {/* Added reference line for irrigation threshold */}
+                      <ReferenceLine y={IRRIGATION_THRESHOLD} stroke="#ff6b6b" strokeDasharray="5 5" />
                       <Line 
                         type="monotone" 
                         dataKey="moisture1" 
@@ -651,6 +705,8 @@ const Dashboard = () => {
                       />
                       <Tooltip />
                       <Legend />
+                      {/* Added reference line for irrigation threshold */}
+                      <ReferenceLine y={IRRIGATION_THRESHOLD} stroke="#ff6b6b" strokeDasharray="5 5" />
                       <Line 
                         type="monotone" 
                         dataKey="moisture1" 
@@ -697,6 +753,8 @@ const Dashboard = () => {
                       />
                       <Tooltip />
                       <Legend />
+                      {/* Added reference line for irrigation threshold */}
+                      <ReferenceLine y={IRRIGATION_THRESHOLD} stroke="#ff6b6b" strokeDasharray="5 5" />
                       <Line 
                         type="monotone" 
                         dataKey="moisture1" 
@@ -728,58 +786,88 @@ const Dashboard = () => {
         </Card>
         
         {/* Irrigation Stats */}
-{/* Irrigation Stats */}
         <Card className="md:col-span-3">
           <CardHeader>
             <CardTitle>Irrigation Statistics</CardTitle>
-            {/* <CardDescription>Water usage patterns</CardDescription> */}
-            
+            <CardDescription>
+              Smart irrigation based on Soil Moisture Sensor 1
+            </CardDescription>
           </CardHeader>
-          <CardDescription className='font-semibold text-center text-2xl' >Work in progress</CardDescription>
-          {/* <CardContent>
-            <div className="flex items-center justify-center">
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={waterUsageData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+          <CardContent>
+            {/* Enhanced Irrigation Status Display */}
+            <div className="space-y-4">
+              {/* Current Status */}
+              <div className="p-4 rounded-lg bg-gray-50">
+                <h4 className="font-medium mb-2">Current Status</h4>
+                <div className="flex items-center justify-between">
+                  <span>Irrigation System:</span>
+                  <Badge 
+                    variant={isIrrigationActive ? "default" : "outline"}
+                    className={isIrrigationActive ? "bg-green-600" : ""}
                   >
-                    {waterUsageData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={WATER_COLORS[index % WATER_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value} liters`, 'Water Usage']} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <Separator className="my-4" />
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Last irrigation</p>
-                <p className="font-medium">Today, 09:24 AM</p>
+                    {isIrrigationActive ? "ACTIVE" : "INACTIVE"}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                  <span>Moisture Level:</span>
+                  <span className={`font-medium ${sensorData.moisture1 < IRRIGATION_THRESHOLD ? "text-orange-600" : "text-green-600"}`}>
+                    {sensorData.moisture1.toFixed(1)}%
+                  </span>
+                </div>
               </div>
-              <div>
-                <p className="text-muted-foreground">Water used today</p>
-                <p className="font-medium">125 liters</p>
+
+              {/* Thresholds */}
+              <div className="p-4 rounded-lg bg-blue-50">
+                <h4 className="font-medium mb-2">System Thresholds</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Irrigation Trigger:</span>
+                    <span className="font-medium text-orange-600">&lt; {IRRIGATION_THRESHOLD}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Low Moisture Alert:</span>
+                    <span className="font-medium text-red-600">&lt; {LOW_MOISTURE_THRESHOLD}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Optimal Range:</span>
+                    <span className="font-medium text-green-600">{IRRIGATION_THRESHOLD}% - 80%</span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-muted-foreground">Irrigation events</p>
-                <p className="font-medium">3 times today</p>
+
+              {/* System Logic */}
+              <div className="p-4 rounded-lg bg-green-50">
+                <h4 className="font-medium mb-2">Smart Logic</h4>
+                <p className="text-sm text-gray-700">
+                  Irrigation automatically activates when Soil Moisture Sensor 1 drops below {IRRIGATION_THRESHOLD}% 
+                  to ensure optimal plant hydration.
+                </p>
+                {isIrrigationActive && (
+                  <div className="mt-2 p-2 bg-green-100 rounded text-sm">
+                    <span className="font-medium text-green-800">
+                      🌱 Currently irrigating: Moisture level at {sensorData.moisture1.toFixed(1)}% is below threshold
+                    </span>
+                  </div>
+                )}
               </div>
-              <div>
-                <p className="text-muted-foreground">Status</p>
-                <p className={`font-medium ${isIrrigationActive ? "text-green-600" : "text-muted-foreground"}`}>
-                  {isIrrigationActive ? "Running" : "Idle"}
+
+              {/* Next Action */}
+              <div className="p-4 rounded-lg bg-yellow-50">
+                <h4 className="font-medium mb-2">Next Action</h4>
+                <p className="text-sm">
+                  {isIrrigationActive ? (
+                    <span className="text-orange-700">
+                      ⏳ System will stop irrigation when moisture rises above {IRRIGATION_THRESHOLD}%
+                    </span>
+                  ) : (
+                    <span className="text-green-700">
+                      ✓ System monitoring. Will activate if moisture drops below {IRRIGATION_THRESHOLD}%
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
-          </CardContent> */}
+          </CardContent>
         </Card>
       </div>
     </div>
