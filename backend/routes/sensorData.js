@@ -5,7 +5,7 @@ const SensorData = require("../models/SensorData");
 router.get("/sensor-data", async (req, res) => {
   try {
     const data = await SensorData.find();
-    console.log("Fetched sensorData count:", data.length);
+    // console.log("Fetched sensorData count:", data.length);cws
     res.json(data);
   } catch (err) {
     console.error("Failed to fetch:", err);

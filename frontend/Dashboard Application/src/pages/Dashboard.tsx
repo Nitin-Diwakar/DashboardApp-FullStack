@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { useSettings } from '@/contexts/SettingsContext';
 import {
   DropletIcon,
   ThermometerIcon,
@@ -113,9 +114,14 @@ const Dashboard = () => {
   const dataInitialized = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Constants for irrigation control
-  const IRRIGATION_THRESHOLD = 20; // Irrigation starts when moisture1 is below 20%
-  const LOW_MOISTURE_THRESHOLD = 30; // Alert threshold
+ // Get settings from context instead of hardcoded values
+const { moistureSettings, irrigationSettings } = useSettings();
+
+// Use dynamic thresholds from settings
+const IRRIGATION_THRESHOLD_S1 = moistureSettings.sensor1.irrigationThreshold;
+const IRRIGATION_THRESHOLD_S2 = moistureSettings.sensor2.irrigationThreshold;
+const LOW_MOISTURE_THRESHOLD_S1 = moistureSettings.sensor1.alertThreshold;
+const LOW_MOISTURE_THRESHOLD_S2 = moistureSettings.sensor2.alertThreshold;
 
   // Helper function to get week number of the year
   const getWeekNumber = (date: Date): number => {
@@ -135,13 +141,28 @@ const Dashboard = () => {
     return Math.ceil((dayOfMonth + offsetDay - 1) / 7);
   };
 
-  // Fixed: Update irrigation status based on soil moisture sensor 1
-  useEffect(() => {
-    if (sensorData && sensorData.moisture1 !== undefined) {
-      const shouldIrrigate = sensorData.moisture1 < IRRIGATION_THRESHOLD;
-      setIsIrrigationActive(shouldIrrigate);
+// Updated: irrigation logic based on sensor priority from settings
+useEffect(() => {
+  if (sensorData && sensorData.moisture1 !== undefined && sensorData.moisture2 !== undefined) {
+    let shouldIrrigate = false;
+    
+    // Check irrigation based on sensor priority from settings
+    switch (irrigationSettings.sensorPriority) {
+      case 'sensor1':
+        shouldIrrigate = sensorData.moisture1 < IRRIGATION_THRESHOLD_S1;
+        break;
+      case 'sensor2':
+        shouldIrrigate = sensorData.moisture2 < IRRIGATION_THRESHOLD_S2;
+        break;
+      case 'both':
+        shouldIrrigate = sensorData.moisture1 < IRRIGATION_THRESHOLD_S1 || 
+                        sensorData.moisture2 < IRRIGATION_THRESHOLD_S2;
+        break;
     }
-  }, [sensorData?.moisture1]);
+    
+    setIsIrrigationActive(shouldIrrigate);
+  }
+}, [sensorData?.moisture1, sensorData?.moisture2, IRRIGATION_THRESHOLD_S1, IRRIGATION_THRESHOLD_S2, irrigationSettings.sensorPriority]);
 
   // Initial data load - separate from the refresh cycle
   useEffect(() => {
@@ -164,8 +185,7 @@ const Dashboard = () => {
         
         setSensorData(currentSensorData);
 
-        // Set irrigation status based on moisture level
-        setIsIrrigationActive(currentSensorData.moisture1 < IRRIGATION_THRESHOLD);
+        
 
         // Process historical data
         const formattedData = sensors.map((entry) => {
@@ -478,17 +498,26 @@ const Dashboard = () => {
             <PowerIcon className={`h-3.5 w-3.5 mr-1 ${isIrrigationActive ? "text-green-100" : ""}`} />
             Irrigation {isIrrigationActive ? "Active" : "Inactive"}
             {isIrrigationActive && (
-              <span className="ml-1 text-xs">({sensorData.moisture1.toFixed(1)}% &lt; {IRRIGATION_THRESHOLD}%)</span>
-            )}
+  <span className="ml-1 text-xs">
+    ({irrigationSettings.sensorPriority === 'sensor1' && `${sensorData.moisture1.toFixed(1)}% < ${IRRIGATION_THRESHOLD_S1}%`}
+    {irrigationSettings.sensorPriority === 'sensor2' && `${sensorData.moisture2.toFixed(1)}% < ${IRRIGATION_THRESHOLD_S2}%`}
+    {irrigationSettings.sensorPriority === 'both' && 'Multi-sensor trigger'})
+  </span>
+)}
           </Badge>
           
-          {/* Enhanced: Better alert logic with proper threshold */}
-          {sensorData.moisture1 < LOW_MOISTURE_THRESHOLD && (
-            <Badge variant="destructive" className="py-1">
-              <AlertTriangleIcon className="h-3.5 w-3.5 mr-1" />
-              Low Moisture Alert ({sensorData.moisture1.toFixed(1)}%)
-            </Badge>
-          )}
+          {sensorData.moisture1 < LOW_MOISTURE_THRESHOLD_S1 && (
+  <Badge variant="destructive" className="py-1">
+    <AlertTriangleIcon className="h-3.5 w-3.5 mr-1" />
+    Sensor 1 Low ({sensorData.moisture1.toFixed(1)}%)
+  </Badge>
+)}
+{sensorData.moisture2 < LOW_MOISTURE_THRESHOLD_S2 && (
+  <Badge variant="destructive" className="py-1">
+    <AlertTriangleIcon className="h-3.5 w-3.5 mr-1" />
+    Sensor 2 Low ({sensorData.moisture2.toFixed(1)}%)
+  </Badge>
+)}
         </div>
       </div>
       
@@ -505,8 +534,8 @@ const Dashboard = () => {
               )}
             </CardTitle>
             <CardDescription>
-              Depth Embedded • Irrigation Threshold: {IRRIGATION_THRESHOLD}%
-            </CardDescription>
+  Depth Embedded • Threshold: {IRRIGATION_THRESHOLD_S1}% • Alert: {LOW_MOISTURE_THRESHOLD_S1}%
+</CardDescription>
           </CardHeader>
           <CardContent>
             <SensorGauge 
@@ -514,20 +543,23 @@ const Dashboard = () => {
               min={0} 
               max={100} 
               label="%" 
-              threshold={IRRIGATION_THRESHOLD}
+              threshold={IRRIGATION_THRESHOLD_S2}
             />
-            {/* Additional status info */}
             <div className="mt-2 text-sm text-gray-600">
-              {sensorData.moisture1 < IRRIGATION_THRESHOLD ? (
-                <span className="text-orange-600 font-medium">
-                  ⚠️ Below irrigation threshold
-                </span>
-              ) : (
-                <span className="text-green-600">
-                  ✓ Above irrigation threshold
-                </span>
-              )}
-            </div>
+  {sensorData.moisture2 < IRRIGATION_THRESHOLD_S2 ? (
+    <span className="text-orange-600 font-medium">
+      ⚠️ Below irrigation threshold
+    </span>
+  ) : sensorData.moisture2 >= moistureSettings.sensor2.optimalMin && sensorData.moisture2 <= moistureSettings.sensor2.optimalMax ? (
+    <span className="text-green-600">
+      ✓ Within optimal range ({moistureSettings.sensor2.optimalMin}%-{moistureSettings.sensor2.optimalMax}%)
+    </span>
+  ) : (
+    <span className="text-blue-600">
+      ℹ️ Above irrigation threshold
+    </span>
+  )}
+</div>
           </CardContent>
         </Card>
         
@@ -535,7 +567,7 @@ const Dashboard = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium">Soil Moisture Sensor 2</CardTitle>
-            <CardDescription>Root Zone • Alert Threshold: {LOW_MOISTURE_THRESHOLD}%</CardDescription>
+            <CardDescription>Root Zone • Threshold: {IRRIGATION_THRESHOLD_S2}% • Alert: {LOW_MOISTURE_THRESHOLD_S2}%</CardDescription>
           </CardHeader>
           <CardContent>
             <SensorGauge 
@@ -543,7 +575,7 @@ const Dashboard = () => {
               min={0} 
               max={100} 
               label="%" 
-              threshold={LOW_MOISTURE_THRESHOLD}
+              threshold={IRRIGATION_THRESHOLD_S2}
             />
           </CardContent>
         </Card>
@@ -648,7 +680,10 @@ const Dashboard = () => {
                       <Tooltip />
                       <Legend />
                       {/* Added reference line for irrigation threshold */}
-                      <ReferenceLine y={IRRIGATION_THRESHOLD} stroke="#ff6b6b" strokeDasharray="5 5" />
+                      <ReferenceLine y={IRRIGATION_THRESHOLD_S1} stroke="#ff6b6b" strokeDasharray="5 5" label="S1 Threshold" />
+{irrigationSettings.sensorPriority !== 'sensor1' && (
+  <ReferenceLine y={IRRIGATION_THRESHOLD_S2} stroke="#ff9999" strokeDasharray="3 3" label="S2 Threshold" />
+)}
                       <Line 
                         type="monotone" 
                         dataKey="moisture1" 
@@ -706,7 +741,10 @@ const Dashboard = () => {
                       <Tooltip />
                       <Legend />
                       {/* Added reference line for irrigation threshold */}
-                      <ReferenceLine y={IRRIGATION_THRESHOLD} stroke="#ff6b6b" strokeDasharray="5 5" />
+                      <ReferenceLine y={IRRIGATION_THRESHOLD_S1} stroke="#ff6b6b" strokeDasharray="5 5" label="S1 Threshold" />
+{irrigationSettings.sensorPriority !== 'sensor1' && (
+  <ReferenceLine y={IRRIGATION_THRESHOLD_S2} stroke="#ff9999" strokeDasharray="3 3" label="S2 Threshold" />
+)}
                       <Line 
                         type="monotone" 
                         dataKey="moisture1" 
@@ -754,7 +792,10 @@ const Dashboard = () => {
                       <Tooltip />
                       <Legend />
                       {/* Added reference line for irrigation threshold */}
-                      <ReferenceLine y={IRRIGATION_THRESHOLD} stroke="#ff6b6b" strokeDasharray="5 5" />
+                      <ReferenceLine y={IRRIGATION_THRESHOLD_S1} stroke="#ff6b6b" strokeDasharray="5 5" label="S1 Threshold" />
+{irrigationSettings.sensorPriority !== 'sensor1' && (
+  <ReferenceLine y={IRRIGATION_THRESHOLD_S2} stroke="#ff9999" strokeDasharray="3 3" label="S2 Threshold" />
+)}
                       <Line 
                         type="monotone" 
                         dataKey="moisture1" 
@@ -786,82 +827,104 @@ const Dashboard = () => {
         </Card>
         
         {/* Irrigation Stats */}
+        {/* Irrigation Stats */}
         <Card className="md:col-span-3">
           <CardHeader>
-            <CardTitle>Irrigation Statistics</CardTitle>
+            <CardTitle>Irrigation Status</CardTitle>
             <CardDescription>
-              Smart irrigation based on Soil Moisture Sensor 1
-            </CardDescription>
+  Smart irrigation based on {irrigationSettings.sensorPriority === 'both' ? 'both sensors' : 
+  irrigationSettings.sensorPriority === 'sensor1' ? 'Soil Moisture Sensor 1' : 'Soil Moisture Sensor 2'}
+</CardDescription>
           </CardHeader>
           <CardContent>
             {/* Enhanced Irrigation Status Display */}
             <div className="space-y-4">
               {/* Current Status */}
-              <div className="p-4 rounded-lg bg-gray-50">
-                <h4 className="font-medium mb-2">Current Status</h4>
+              <div className="p-4 rounded-lg bg-muted/50">
+                <h4 className="font-medium mb-2 text-foreground">Current Status</h4>
                 <div className="flex items-center justify-between">
-                  <span>Irrigation System:</span>
+                  <span className="text-muted-foreground">Irrigation System:</span>
                   <Badge 
                     variant={isIrrigationActive ? "default" : "outline"}
-                    className={isIrrigationActive ? "bg-green-600" : ""}
+                    className={isIrrigationActive ? "bg-green-600 text-white hover:bg-green-700" : ""}
                   >
                     {isIrrigationActive ? "ACTIVE" : "INACTIVE"}
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between mt-2">
-                  <span>Moisture Level:</span>
-                  <span className={`font-medium ${sensorData.moisture1 < IRRIGATION_THRESHOLD ? "text-orange-600" : "text-green-600"}`}>
-                    {sensorData.moisture1.toFixed(1)}%
-                  </span>
+                <div className="space-y-2 mt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Sensor 1 Level:</span>
+                    <span className={`font-medium ${sensorData.moisture1 < IRRIGATION_THRESHOLD_S1 ? "text-orange-500" : "text-green-500"}`}>
+                      {sensorData.moisture1.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Sensor 2 Level:</span>
+                    <span className={`font-medium ${sensorData.moisture2 < IRRIGATION_THRESHOLD_S2 ? "text-orange-500" : "text-green-500"}`}>
+                      {sensorData.moisture2.toFixed(1)}%
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Thresholds */}
-              <div className="p-4 rounded-lg bg-blue-50">
-                <h4 className="font-medium mb-2">System Thresholds</h4>
+              {/* System Thresholds */}
+              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800">
+                <h4 className="font-medium mb-2 text-foreground">System Thresholds</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span>Irrigation Trigger:</span>
-                    <span className="font-medium text-orange-600">&lt; {IRRIGATION_THRESHOLD}%</span>
+                    <span className="text-muted-foreground">Sensor 1 Irrigation:</span>
+                    <span className="font-medium text-orange-500">&lt; {IRRIGATION_THRESHOLD_S1}%</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Low Moisture Alert:</span>
-                    <span className="font-medium text-red-600">&lt; {LOW_MOISTURE_THRESHOLD}%</span>
+                    <span className="text-muted-foreground">Sensor 2 Irrigation:</span>
+                    <span className="font-medium text-orange-500">&lt; {IRRIGATION_THRESHOLD_S2}%</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Optimal Range:</span>
-                    <span className="font-medium text-green-600">{IRRIGATION_THRESHOLD}% - 80%</span>
+                    <span className="text-muted-foreground">Sensor 1 Alert:</span>
+                    <span className="font-medium text-red-500">&lt; {LOW_MOISTURE_THRESHOLD_S1}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Sensor 2 Alert:</span>
+                    <span className="font-medium text-red-500">&lt; {LOW_MOISTURE_THRESHOLD_S2}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Sensor Priority:</span>
+                    <span className="font-medium text-blue-500 capitalize">{irrigationSettings.sensorPriority}</span>
                   </div>
                 </div>
               </div>
 
               {/* System Logic */}
-              <div className="p-4 rounded-lg bg-green-50">
-                <h4 className="font-medium mb-2">Smart Logic</h4>
-                <p className="text-sm text-gray-700">
-                  Irrigation automatically activates when Soil Moisture Sensor 1 drops below {IRRIGATION_THRESHOLD}% 
-                  to ensure optimal plant hydration.
+              <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800">
+                <h4 className="font-medium mb-2 text-foreground">Smart Logic</h4>
+                <p className="text-sm text-muted-foreground">
+                  Irrigation automatically activates based on {irrigationSettings.sensorPriority} priority. 
+                  Duration: {irrigationSettings.duration} minutes. Re-irrigation delay: {irrigationSettings.reIrrigationDelay} minutes.
+                  {irrigationSettings.weatherIntegration && " Weather integration enabled."}
                 </p>
                 {isIrrigationActive && (
-                  <div className="mt-2 p-2 bg-green-100 rounded text-sm">
-                    <span className="font-medium text-green-800">
-                      🌱 Currently irrigating: Moisture level at {sensorData.moisture1.toFixed(1)}% is below threshold
+                  <div className="mt-2 p-2 bg-green-100 dark:bg-green-900/50 border border-green-300 dark:border-green-700 rounded text-sm">
+                    <span className="font-medium text-green-800 dark:text-green-200">
+                      🌱 Currently irrigating: 
+                      {irrigationSettings.sensorPriority === 'sensor1' && ` Sensor 1 at ${sensorData.moisture1.toFixed(1)}% < ${IRRIGATION_THRESHOLD_S1}%`}
+                      {irrigationSettings.sensorPriority === 'sensor2' && ` Sensor 2 at ${sensorData.moisture2.toFixed(1)}% < ${IRRIGATION_THRESHOLD_S2}%`}
+                      {irrigationSettings.sensorPriority === 'both' && ` Multi-sensor trigger activated`}
                     </span>
                   </div>
                 )}
               </div>
 
               {/* Next Action */}
-              <div className="p-4 rounded-lg bg-yellow-50">
-                <h4 className="font-medium mb-2">Next Action</h4>
+              <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-950/50 border border-yellow-200 dark:border-yellow-800">
+                <h4 className="font-medium mb-2 text-foreground">Next Action</h4>
                 <p className="text-sm">
                   {isIrrigationActive ? (
-                    <span className="text-orange-700">
-                      ⏳ System will stop irrigation when moisture rises above {IRRIGATION_THRESHOLD}%
+                    <span className="text-orange-600 dark:text-orange-400">
+                      ⏳ System will stop irrigation in {irrigationSettings.duration} minutes or when moisture levels recover
                     </span>
                   ) : (
-                    <span className="text-green-700">
-                      ✓ System monitoring. Will activate if moisture drops below {IRRIGATION_THRESHOLD}%
+                    <span className="text-green-600 dark:text-green-400">
+                      ✓ System monitoring {irrigationSettings.sensorPriority} sensor(s). Next check in 30 seconds.
                     </span>
                   )}
                 </p>
