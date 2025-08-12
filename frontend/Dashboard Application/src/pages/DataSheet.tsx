@@ -179,11 +179,11 @@ const DataSheet = () => {
       accessorKey: "humidity",
       cell: ({ getValue }) => getValue<number>().toFixed(1),
     },
-    {
-      header: "Battery (%)",
-      accessorKey: "batteryLevel",
-      cell: ({ getValue }) => getValue<number>().toFixed(1),
-    },
+    // {
+    //   header: "Battery (%)",
+    //   accessorKey: "batteryLevel",
+    //   cell: ({ getValue }) => getValue<number>().toFixed(1),
+    // },
   ], []);
 
   const table = useReactTable({
