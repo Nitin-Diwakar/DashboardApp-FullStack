@@ -1,4 +1,4 @@
-// src/types/sensors.ts - Updated Types
+// src/types/sensors.ts - Enhanced Types with FormattedSensorData
 export interface ISensorHistory {
   timestamp: string;
   sensor1: number;
@@ -23,4 +23,19 @@ export interface IWeatherData {
   location: string;
   windSpeed: number;
   precipitation: number;
+}
+
+export interface FormattedSensorData {
+  timestamp: string;
+  time: string;
+  moisture1: number;
+  moisture2: number;
+  date: Date;
+  month: number;
+  year: number;
+  monthName: string;
+  weekNum: number;
+  monthWeek: number; 
+  dayOfMonth: number;
+  formattedDate: string; 
 }
