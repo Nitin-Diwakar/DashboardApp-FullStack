@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -25,6 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import CircularProgressComponent from "@/components/Spinner/CircularProgress";
 
 const DashboardLayout = () => {
   const { user, logout } = useAuth();
@@ -273,7 +274,9 @@ const DashboardLayout = () => {
 
         {/* Page content */}
         <main className="flex-1 overflow-auto p-4 md:p-6">
-          <Outlet />
+          <Suspense fallback={<CircularProgressComponent/>}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

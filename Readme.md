@@ -41,7 +41,8 @@ Provides farmers with a **single health score (0-100)** that summarizes overall 
 ### Overall Health Score Algorithm
 
 ```javascript
-// Health Score Calculation (0-100)
+//remove health score for now
+// Health Score Calculation (0-100) //
 healthScore = (moistureScore × 0.6) + (temperatureScore × 0.25) + (humidityScore × 0.15)
 
 // Moisture Score (60% weight - most critical)
