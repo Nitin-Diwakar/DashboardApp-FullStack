@@ -35,11 +35,17 @@ const LoginPage = () => {
             socialButtonsBlockButtonText: "text-foreground",
             formFieldLabel: "text-foreground",
             formFieldInput: "bg-background border-input",
-            footerActionLink: "text-primary hover:text-primary/80"
+            footerActionLink: "text-primary hover:text-primary/80",
+            dividerLine: "bg-border",
+            dividerText: "text-muted-foreground",
+            formFieldInputShowPasswordButton: "text-muted-foreground hover:text-foreground",
+            identityPreviewText: "text-foreground",
+            identityPreviewEditButton: "text-primary hover:text-primary/80"
           }
         }}
         redirectUrl="/"
         signUpUrl="/register"
+        // Remove routing and path props - let Clerk handle routing internally
       />
     </div>
   );

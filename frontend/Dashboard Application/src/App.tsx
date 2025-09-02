@@ -34,8 +34,8 @@ function App() {
                     <AuthLayout />
                   </SignedOut>
                 }>
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/login/*" element={<LoginPage />} />
+                  <Route path="/register/*" element={<RegisterPage />} />
                 </Route>
 
                 {/* Protected Routes - Only show when user IS signed in */}
