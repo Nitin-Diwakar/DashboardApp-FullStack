@@ -63,11 +63,11 @@ const RegisterPage = () => {
     setIsLoading(true);
     try {
       const result = await signUp.create({
-        first_name: data.firstName,
-        last_name: data.lastName,
-        email_address: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        emailAddress: data.email,
         password: data.password,
-        unsafe_metadata: {
+        unsafeMetadata: {
           userType: data.userType,
           contactNumber: data.contactNumber,
         }
