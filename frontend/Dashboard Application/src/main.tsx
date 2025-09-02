@@ -5,10 +5,10 @@ import './index.css';
 import { ClerkProvider } from '@clerk/clerk-react';
 
 // TEMPORARY: Clean up old auth data (remove these lines after running once)
-// localStorage.removeItem('auth_token');
-// localStorage.removeItem('registered_name');
-// localStorage.removeItem('registered_email');
-// console.log('🧹 Cleaned up old authentication data from localStorage');
+localStorage.removeItem('auth_token');
+localStorage.removeItem('registered_name');
+localStorage.removeItem('registered_email');
+console.log('🧹 Cleaned up old authentication data from localStorage');
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 if (!PUBLISHABLE_KEY) {

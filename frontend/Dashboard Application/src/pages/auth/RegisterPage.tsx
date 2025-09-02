@@ -57,19 +57,17 @@ const RegisterPage = () => {
     }
   }, [isSignedIn, navigate]);
 
-  const userType = watch('userType');
-
   const onSubmit = async (data: RegisterValues) => {
-    if (!isLoaded) return;
+    if (!isLoaded || !signUp) return;
 
     setIsLoading(true);
     try {
       const result = await signUp.create({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        emailAddress: data.email,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email_address: data.email,
         password: data.password,
-        unsafeMetadata: {
+        unsafe_metadata: {
           userType: data.userType,
           contactNumber: data.contactNumber,
         }
@@ -84,6 +82,7 @@ const RegisterPage = () => {
         description: 'Please check your email for a verification code.',
       });
     } catch (err: any) {
+      console.error('Registration error:', err);
       toast({
         title: 'Registration failed',
         description: err.errors?.[0]?.message || 'There was an error creating your account.',
@@ -124,6 +123,10 @@ const RegisterPage = () => {
       setIsLoading(false);
     }
   };
+
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
 
   // Show verification form if verifying
   if (verifying) {
@@ -246,7 +249,7 @@ const RegisterPage = () => {
           )}
         </div>
         
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="w-full" disabled={isLoading || !isLoaded}>
           {isLoading ? 'Creating account...' : 'Create account'}
         </Button>
       </form>
