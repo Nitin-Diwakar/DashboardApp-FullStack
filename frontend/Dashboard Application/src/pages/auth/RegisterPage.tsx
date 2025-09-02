@@ -62,10 +62,11 @@ const RegisterPage = () => {
 
     setIsLoading(true);
     try {
+      // Make sure we're using the correct Clerk parameter names
       const result = await signUp.create({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        emailAddress: data.email,
+        firstName: data.firstName,        // ✅ Correct parameter name
+        lastName: data.lastName,          // ✅ Correct parameter name  
+        emailAddress: data.email,         // ✅ Correct parameter name
         password: data.password,
         unsafeMetadata: {
           userType: data.userType,
@@ -83,6 +84,15 @@ const RegisterPage = () => {
       });
     } catch (err: any) {
       console.error('Registration error:', err);
+      
+      // Enhanced error logging for debugging
+      if (err.errors && Array.isArray(err.errors)) {
+        console.error('Detailed errors:', err.errors);
+        err.errors.forEach((error: any, index: number) => {
+          console.error(`Error ${index + 1}:`, error);
+        });
+      }
+      
       toast({
         title: 'Registration failed',
         description: err.errors?.[0]?.message || 'There was an error creating your account.',
@@ -112,8 +122,14 @@ const RegisterPage = () => {
         navigate('/');
       } else {
         console.error('Verification incomplete:', completeSignUp);
+        toast({
+          title: 'Verification incomplete',
+          description: 'Please try again or contact support.',
+          variant: 'destructive',
+        });
       }
     } catch (err: any) {
+      console.error('Verification error:', err);
       toast({
         title: 'Verification failed',
         description: err.errors?.[0]?.message || 'Invalid verification code.',
