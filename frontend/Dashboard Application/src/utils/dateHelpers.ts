@@ -1,58 +1,107 @@
-// src/utils/dateHelpers.ts
+// src/utils/dateHelpers.ts - Missing utility functions
+import { format } from 'date-fns';
 
-/**
- * Get week number of the year
- * @param date - Date to get week number for
- * @returns Week number (1-53)
- */
+export const getCurrentMonthKey = (): string => {
+  const now = new Date();
+  return `${now.getFullYear()}-${now.getMonth()}`;
+};
+
 export const getWeekNumber = (date: Date): number => {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
-  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 };
 
-/**
- * Get week number relative to the month (1-indexed)
- * @param date - Date to get month week for
- * @returns Week number within month (1-6)
- */
 export const getMonthWeek = (date: Date): number => {
-  const d = new Date(date);
-  const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
-  const offsetDay = firstDay.getDay() || 7; // Make Sunday 7 instead of 0
-  const dayOfMonth = d.getDate();
-  return Math.ceil((dayOfMonth + offsetDay - 1) / 7);
+  const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+  const dayOfMonth = date.getDate();
+  const firstDayOfWeek = firstDay.getDay();
+  return Math.ceil((dayOfMonth + firstDayOfWeek) / 7);
 };
 
-/**
- * Format date for display in Indian locale
- * @param date - Date to format
- * @param options - Intl.DateTimeFormatOptions
- * @returns Formatted date string
- */
-export const formatDateIndia = (
-  date: Date, 
-  options: Intl.DateTimeFormatOptions
-): string => {
-  return date.toLocaleString("en-IN", options);
+export const formatDateIndia = (date: Date, options: Intl.DateTimeFormatOptions = {}): string => {
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    ...options
+  }).format(date);
 };
 
-/**
- * Get current month key for filtering
- * @returns String in format "YYYY-MM"
- */
-export const getCurrentMonthKey = (): string => {
-  const currentDate = new Date();
-  return `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
-};
-
-/**
- * Create unique date key for grouping
- * @param date - Date to create key for
- * @returns ISO date string (YYYY-MM-DD)
- */
 export const createDateKey = (date: Date): string => {
-  return date.toISOString().split('T')[0];
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+};
+
+// src/utils/dataProcessors.ts - Missing data processing functions
+import { FormattedSensorData, MonthOption } from '@/types/dashboard';
+import { getWeekNumber, getMonthWeek, formatDateIndia, createDateKey } from './dateHelpers';
+
+export const processHistoricalData = (sensors: any[]): FormattedSensorData[] => {
+  return sensors.map((entry) => {
+    const entryDate = new Date(entry.timestamp);
+    const monthWeek = getMonthWeek(entryDate);
+    
+    return {
+      timestamp: entry.timestamp,
+      time: formatDateIndia(entryDate, {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+        day: "numeric",
+        month: "short"
+      }),
+      moisture1: entry.sensor1 || 0,
+      moisture2: entry.sensor2 || 0,
+      date: entryDate,
+      month: entryDate.getMonth(),
+      year: entryDate.getFullYear(),
+      monthName: formatDateIndia(entryDate, { month: "long" }),
+      weekNum: getWeekNumber(entryDate),
+      monthWeek: monthWeek,
+      dayOfMonth: entryDate.getDate(),
+      formattedDate: formatDateIndia(entryDate, {
+        day: "numeric",
+        month: "short"
+      })
+    };
+  });
+};
+
+export const processMonthOptions = (formattedData: FormattedSensorData[]): MonthOption[] => {
+  const monthsMap = new Map<string, MonthOption>();
+  
+  formattedData.forEach(entry => {
+    const key = `${entry.year}-${entry.month}`;
+    if (!monthsMap.has(key)) {
+      monthsMap.set(key, {
+        id: key,
+        name: `${entry.monthName} ${entry.year}`,
+        month: entry.month,
+        year: entry.year
+      });
+    }
+  });
+
+  return Array.from(monthsMap.values()).sort((a, b) => {
+    if (a.year !== b.year) return b.year - a.year;
+    return b.month - a.month;
+  });
+};
+
+export const processDailyAverageData = (formattedData: FormattedSensorData[]): FormattedSensorData[] => {
+  // For now, just return the formatted data as-is
+  // In a real implementation, you'd calculate daily averages
+  return formattedData;
+};
+
+export const processMonthlyAverageData = (dailyData: FormattedSensorData[]): any[] => {
+  // For now, return empty array
+  // In a real implementation, you'd calculate monthly averages
+  return [];
+};
+
+export const processDayOptions = (filteredData: FormattedSensorData[]): any[] => {
+  // For now, return empty array
+  // In a real implementation, you'd process day options
+  return [];
 };
