@@ -1,5 +1,4 @@
-// src/layouts/DashboardLayout.tsx
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -11,18 +10,24 @@ import {
   X,
   Plane as Plant,
   Settings as SettingsIcon,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { UserButton, useUser } from "@clerk/clerk-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { ModeToggle } from "@/components/mode-toggle";
 import { cn } from "@/lib/utils";
-import CircularProgressComponent from "@/components/Spinner/CircularProgress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const DashboardLayout = () => {
-  const { user, isLoaded } = useUser();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<
     { id: number; message: string; read: boolean }[]
@@ -30,9 +35,7 @@ const DashboardLayout = () => {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Mock notifications data - could be personalized based on user type
-    const userType = user?.unsafeMetadata?.userType as string;
-    
+    // Mock notifications data
     setNotifications([
       {
         id: 1,
@@ -41,9 +44,7 @@ const DashboardLayout = () => {
       },
       {
         id: 2,
-        message: userType === 'farmer' 
-          ? "Upcoming fertilizer application scheduled for tomorrow"
-          : "System maintenance scheduled for weekend",
+        message: "Upcoming fertilizer application scheduled for tomorrow",
         read: false,
       },
       { id: 3, message: "Irrigation completed successfully", read: true },
@@ -56,18 +57,14 @@ const DashboardLayout = () => {
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [user]);
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  // Show loading while user data loads
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <CircularProgressComponent />
-      </div>
-    );
-  }
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   const NavItem = ({
     to,
@@ -85,183 +82,198 @@ const DashboardLayout = () => {
           "flex items-center gap-3 rounded-lg px-3 py-2 text-base transition-all hover:bg-accent",
           isActive
             ? "bg-accent text-accent-foreground"
-            : "text-muted-foreground hover:text-foreground"
+            : "text-muted-foreground"
         )
       }
     >
-      <Icon className="h-4 w-4" />
-      {label}
+      <Icon className="h-5 w-5" />
+      <span>{label}</span>
     </NavLink>
   );
 
-  const navItems = [
-    { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-    { to: "/schedule", icon: Calendar, label: "Schedule" },
-    { to: "/activities", icon: ListTodo, label: "Activities" },
-    { to: "/data", icon: Database, label: "Data" },
-    { to: "/settings", icon: SettingsIcon, label: "Settings" },
-  ];
-
-  const getUserDisplayName = () => {
-    if (!user) return 'User';
-    return user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.emailAddresses[0]?.emailAddress || 'User';
-  };
-
-  const getUserTypeDisplay = () => {
-    const userType = user?.unsafeMetadata?.userType as string;
-    return userType ? userType.charAt(0).toUpperCase() + userType.slice(1) : 'User';
-  };
+  const NavItems = () => (
+    <>
+      <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
+      <NavItem to="/schedule" icon={Calendar} label="Schedule" />
+      <NavItem to="/activities" icon={ListTodo} label="Activities" />
+      <NavItem to="/data" icon={Database} label="Data" />
+      <NavItem to="/settings" icon={SettingsIcon} label="Settings" />
+    </>
+  );
 
   return (
-    <div className="flex h-screen bg-muted/40">
-      {/* Desktop Sidebar */}
-      <div className="hidden border-r bg-muted/40 md:block">
-        <div className="flex h-full max-h-screen flex-col gap-2">
-          {/* Header */}
-          <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-            <div className="flex items-center gap-2 font-semibold">
-              <Plant className="h-6 w-6" />
-              <span className="text-lg">
-                <span className="text-green-500">Agri</span>{" "}
-                <span className="text-orange-500">NextGen</span>
-              </span>
-            </div>
-            <Button variant="outline" size="icon" className="ml-auto h-8 w-8">
-              <Bell className="h-4 w-4" />
-              {unreadCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs"
-                >
-                  {unreadCount}
-                </Badge>
-              )}
-              <span className="sr-only">Toggle notifications</span>
-            </Button>
-          </div>
-
-          {/* User Info */}
-          <div className="px-4 py-2">
-            <div className="flex items-center gap-3">
-              <UserButton 
-                appearance={{
-                  elements: {
-                    avatarBox: "h-8 w-8"
-                  }
-                }}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{getUserDisplayName()}</p>
-                <p className="text-xs text-muted-foreground">{getUserTypeDisplay()}</p>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Navigation */}
-          <div className="flex-1 px-3">
-            <nav className="grid gap-1 text-sm font-medium">
-              {navItems.map((item) => (
-                <NavItem key={item.to} {...item} />
-              ))}
-            </nav>
-          </div>
+    <div className="flex h-screen bg-background">
+      {/* Sidebar for desktop */}
+      <aside className="hidden md:flex w-64 flex-col border-r bg-background">
+        <div className="flex h-14 items-center border-b px-4">
+          {/* <Plant className="h-6 w-6 text-green-600 mr-2" /> */}
+          <span className="font-semibold text-lg">
+            <span className="text-green-500">Agri</span>{" "}
+            <span className="text-orange-500">NextGen</span>
+          </span>
         </div>
-      </div>
+        <div className="flex-1 overflow-auto py-4 px-3">
+          <nav className="grid gap-1">
+            <NavItems />
+          </nav>
+        </div>
+        <div className="border-t p-4">
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            onClick={handleLogout}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Log out
+          </Button>
+        </div>
+      </aside>
 
-      {/* Mobile Header & Content */}
-      <div className="flex flex-col flex-1">
-        {/* Mobile Header */}
-        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0 md:hidden"
-              >
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle navigation menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col">
-              {/* Mobile nav header */}
-              <div className="flex items-center gap-2 font-semibold mb-4">
-                <Plant className="h-6 w-6" />
-                <span className="text-lg">
-                  <span className="text-green-500">Agri</span>{" "}
-                  <span className="text-orange-500">NextGen</span>
-                </span>
-              </div>
-
-              {/* User info in mobile */}
-              <div className="flex items-center gap-3 mb-4 p-2 rounded border">
-                <UserButton 
-                  appearance={{
-                    elements: {
-                      avatarBox: "h-8 w-8"
-                    }
-                  }}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{getUserDisplayName()}</p>
-                  <p className="text-xs text-muted-foreground">{getUserTypeDisplay()}</p>
+      {/* Main content */}
+      <div className="flex flex-1 flex-col">
+        {/* Header */}
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
+          <div className="md:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="md:hidden">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-56 p-0">
+                <div className="flex h-14 items-center border-b px-4">
+                  <Plant className="h-6 w-6 text-green-600 mr-2" />
+                  <span className="font-semibold text-lg">AgriBolt</span>
                 </div>
-              </div>
-
-              <Separator className="mb-4" />
-
-              {/* Mobile navigation */}
-              <nav className="grid gap-2 text-sm font-medium">
-                {navItems.map((item) => (
-                  <NavItem key={item.to} {...item} />
-                ))}
-              </nav>
-            </SheetContent>
-          </Sheet>
-
-          <div className="w-full flex-1">
-            <div className="flex justify-between items-center">
-              <div className="md:hidden">
-                <span className="font-semibold text-lg">
-                  <span className="text-green-500">Agri</span>{" "}
-                  <span className="text-orange-500">NextGen</span>
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" className="relative">
-                  <Bell className="h-4 w-4" />
+                <nav className="grid gap-1 p-4">
+                  <NavItems />
+                </nav>
+                <Separator />
+                <div className="p-4">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log out
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+          <div className="flex-1 md:ml-0">
+            <h1 className="text-lg font-semibold md:hidden">
+              <span className="text-green-500">Agri</span>{" "}
+              <span className="text-orange-500">NextGen</span>
+            </h1>
+          </div>
+          <div className="flex items-center gap-4">
+            {/* Fixed Bell Icon with proper notification badge */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative h-9 w-9 rounded-full hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {/* Bell Icon - Fixed sizing and positioning */}
+                  <Bell className="h-4 w-4 text-foreground" />
+                  
+                  {/* Notification Badge - Fixed positioning and z-index */}
                   {unreadCount > 0 && (
                     <Badge
                       variant="destructive"
-                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs"
+                      className="absolute -right-1 -top-1 h-5 w-5 min-w-[20px] rounded-full border-2 border-background p-0 text-xs font-bold flex items-center justify-center z-10"
                     >
-                      {unreadCount}
+                      {unreadCount > 9 ? "9+" : unreadCount}
                     </Badge>
                   )}
-                  <span className="sr-only">Toggle notifications</span>
+                  <span className="sr-only">View notifications</span>
                 </Button>
-                <ModeToggle />
-                <div className="hidden md:flex">
-                  <UserButton 
-                    appearance={{
-                      elements: {
-                        avatarBox: "h-8 w-8"
-                      }
-                    }}
-                  />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="end" 
+                className="w-[350px] p-0 rounded-lg border bg-popover text-popover-foreground shadow-lg"
+                sideOffset={5}
+              >
+                <div className="flex items-center justify-between px-4 py-3 border-b">
+                  <h2 className="font-semibold">Notifications</h2>
+                  {unreadCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-primary hover:bg-accent hover:text-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setNotifications(notifications.map(n => ({ ...n, read: true })));
+                      }}
+                    >
+                      Mark all as read
+                    </Button>
+                  )}
                 </div>
-              </div>
-            </div>
+                
+                {notifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-6 text-center">
+                    <Bell className="h-8 w-8 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      No notifications yet
+                    </p>
+                  </div>
+                ) : (
+                  <div className="max-h-[400px] overflow-y-auto">
+                    {notifications.map((notification) => (
+                      <DropdownMenuItem 
+                        key={notification.id}
+                        className={cn(
+                          "flex flex-col items-start gap-1 p-3 border-b cursor-pointer",
+                          !notification.read && "bg-accent/50",
+                          "hover:bg-accent focus:bg-accent"
+                        )}
+                        onClick={() => {
+                          if (!notification.read) {
+                            setNotifications(notifications.map(n => 
+                              n.id === notification.id ? { ...n, read: true } : n
+                            ));
+                          }
+                        }}
+                      >
+                        <p className="text-sm">{notification.message}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {!notification.read && (
+                            <span className="h-2 w-2 rounded-full bg-primary" />
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            Just now
+                          </span>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="p-2 border-t">
+                  <Button
+                    variant="ghost"
+                    className="w-full text-sm hover:bg-accent hover:text-foreground"
+                    onClick={() => navigate('/notifications')}
+                  >
+                    View all notifications
+                  </Button>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <ModeToggle />
+            <span className="hidden md:inline text-sm">{user?.name}</span>
           </div>
         </header>
 
-        {/* Main Content */}
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-auto">
-          <Suspense fallback={<CircularProgressComponent />}>
-            <Outlet />
-          </Suspense>
+        {/* Page content */}
+        <main className="flex-1 overflow-auto p-4 md:p-6">
+          <Outlet />
         </main>
       </div>
     </div>

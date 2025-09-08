@@ -19,15 +19,7 @@ mongoose.connect(process.env.MONGO_URI, {
 
 // Routes
 const sensorDataRoute = require("./routes/sensorData");
-const userDataRoute = require("./routes/userData");
-
 app.use("/api", sensorDataRoute); // Base route = /api/sensor-data
-app.use("/api", userDataRoute);   // Base route = /api/user-data
-
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({ status: "OK", message: "Agri NextGen Backend is running" });
-});
 
 // Start the server
 const PORT = process.env.PORT || 5000;

@@ -13,9 +13,10 @@ import Activities from '@/pages/Activities';
 import DataSheet from '@/pages/DataSheet';
 import { SettingsProvider } from '@/contexts/SettingsContext';
 import Settings from '@/pages/Settings';
+
+import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { SignedIn, SignedOut } from '@clerk/clerk-react';
-import { ClerkUserProvider } from '@/contexts/ClerkUserContext';
+
 
 // Create a client
 const queryClient = new QueryClient();
@@ -24,38 +25,27 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-        <ClerkUserProvider>
-          <SettingsProvider>
+        <AuthProvider>
+          <SettingsProvider> {/* Wrap with SettingsProvider */}
             <BrowserRouter>
               <Routes>
-                {/* Public Routes - Only show when user is NOT signed in */}
-                <Route element={
-                  <SignedOut>
-                    <AuthLayout />
-                  </SignedOut>
-                }>
-                  <Route path="/login/*" element={<LoginPage />} />
-                  <Route path="/register/*" element={<RegisterPage />} />
+                <Route element={<AuthLayout />}>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<RegisterPage />} />
                 </Route>
-
-                {/* Protected Routes - Only show when user IS signed in */}
-                <Route element={
-                  <SignedIn>
-                    <ProtectedRoute />
-                  </SignedIn>
-                }>
+                <Route element={<ProtectedRoute />}>
                   <Route element={<DashboardLayout />}>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/schedule" element={<Schedule />} />
                     <Route path="/activities" element={<Activities />} />
                     <Route path="/data" element={<DataSheet />} />
-                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/settings" element={<Settings />} /> {/* Add Settings route */}
                   </Route>
                 </Route>
               </Routes>
             </BrowserRouter>
-          </SettingsProvider>
-        </ClerkUserProvider>
+          </SettingsProvider> {/* Close SettingsProvider */}
+        </AuthProvider>
         <Toaster />
       </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
