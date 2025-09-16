@@ -6,9 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:analyze": "tsc -b && vite build --mode analyze",
     "build:docker": "vite build --mode production",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "perf:test": "lighthouse http://localhost:4173 --only-categories=performance --output=json --output-path=./lighthouse-report.json",
+    "perf:analyze": "node scripts/performance-test.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

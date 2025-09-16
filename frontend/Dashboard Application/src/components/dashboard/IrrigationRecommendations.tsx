@@ -136,7 +136,7 @@ export const IrrigationRecommendations: React.FC<IrrigationRecommendationsProps>
   // Smart scheduling suggestions
   const getSchedulingSuggestions = () => {
     const suggestions = [];
-    const currentHour = new Date().getHours();
+    // const currentHour = new Date().getHours();
     
     // Optimal timing based on weather
     if (weatherData.temperature > 25) {

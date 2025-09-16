@@ -33,8 +33,9 @@ export const FieldHealthOverview: React.FC<FieldHealthOverviewProps> = ({
   // Calculate overall field health score
   const calculateHealthScore = () => {
     const avgMoisture = (sensorData.moisture1 + sensorData.moisture2) / 2;
-    const optimalRange1 = moistureSettings.sensor1.optimalMax - moistureSettings.sensor1.optimalMin;
-    const optimalRange2 = moistureSettings.sensor2.optimalMax - moistureSettings.sensor2.optimalMin;
+    // Calculate optimal ranges for future use
+    // const optimalRange1 = moistureSettings.sensor1.optimalMax - moistureSettings.sensor1.optimalMin;
+    // const optimalRange2 = moistureSettings.sensor2.optimalMax - moistureSettings.sensor2.optimalMin;
     const avgOptimalMin = (moistureSettings.sensor1.optimalMin + moistureSettings.sensor2.optimalMin) / 2;
     const avgOptimalMax = (moistureSettings.sensor1.optimalMax + moistureSettings.sensor2.optimalMax) / 2;
     
@@ -65,7 +66,7 @@ export const FieldHealthOverview: React.FC<FieldHealthOverviewProps> = ({
   // Field condition analysis
   const getFieldCondition = () => {
     const healthScore = calculateHealthScore();
-    const avgMoisture = (sensorData.moisture1 + sensorData.moisture2) / 2;
+    // const avgMoisture = (sensorData.moisture1 + sensorData.moisture2) / 2;
     
     if (healthScore >= 90) {
       return {

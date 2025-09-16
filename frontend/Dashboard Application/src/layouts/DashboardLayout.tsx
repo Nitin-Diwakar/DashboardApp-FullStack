@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
+// Import icons from our optimized centralized module
 import {
   LayoutDashboard,
   Calendar,
@@ -8,10 +9,10 @@ import {
   Bell,
   Menu,
   X,
-  Plane as Plant,
+  Plant,
   Settings as SettingsIcon,
   LogOut,
-} from "lucide-react";
+} from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
