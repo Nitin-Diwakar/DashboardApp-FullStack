@@ -40,11 +40,11 @@ import { DateRange } from "react-day-picker";
 interface SensorDataRecord {
   id: string;
   timestamp: Date;
-  moisture1: number;
-  moisture2: number;
-  temperature: number;
-  humidity: number;
-  batteryLevel: number;
+  moisture1: number | null;
+  moisture2: number | null;
+  temperature: number | null;
+  humidity: number | null;
+  batteryLevel: number | null;
 }
 
 const DataSheet = () => {
@@ -73,11 +73,11 @@ const DataSheet = () => {
       const transformed = json.map((entry: any, index: number) => ({
         id: index.toString(),
         timestamp: new Date(entry.timestamp),
-        moisture1: entry.sensor1,
-        moisture2: entry.sensor2,
-        temperature: entry.temperature || Math.random() * 35 + 15, // Fallback for demo
-        humidity: entry.humidity || Math.random() * 80 + 20, // Fallback for demo
-        batteryLevel: entry.batteryLevel || Math.random() * 100,
+        moisture1: entry.sensor1 ?? null,
+        moisture2: entry.sensor2 ?? null,
+        temperature: entry.temperature ?? null,
+        humidity: entry.humidity ?? null,
+        batteryLevel: entry.batteryLevel ?? null,
       }));
 
       setData(transformed.reverse());
@@ -101,34 +101,34 @@ const DataSheet = () => {
   const filteredData = useMemo(() => {
     return data.filter((row) => {
       // Check moisture sensor 1 range - only apply filter if value is not empty
-      if (moisture1Min !== "" && row.moisture1 < parseFloat(moisture1Min)) {
+      if (moisture1Min !== "" && (row.moisture1 == null || row.moisture1 < parseFloat(moisture1Min))) {
         return false;
       }
-      if (moisture1Max !== "" && row.moisture1 > parseFloat(moisture1Max)) {
+      if (moisture1Max !== "" && (row.moisture1 == null || row.moisture1 > parseFloat(moisture1Max))) {
         return false;
       }
 
       // Check moisture sensor 2 range
-      if (moisture2Min !== "" && row.moisture2 < parseFloat(moisture2Min)) {
+      if (moisture2Min !== "" && (row.moisture2 == null || row.moisture2 < parseFloat(moisture2Min))) {
         return false;
       }
-      if (moisture2Max !== "" && row.moisture2 > parseFloat(moisture2Max)) {
+      if (moisture2Max !== "" && (row.moisture2 == null || row.moisture2 > parseFloat(moisture2Max))) {
         return false;
       }
 
       // Added: Temperature filters
-      if (temperatureMin !== "" && row.temperature < parseFloat(temperatureMin)) {
+      if (temperatureMin !== "" && (row.temperature == null || row.temperature < parseFloat(temperatureMin))) {
         return false;
       }
-      if (temperatureMax !== "" && row.temperature > parseFloat(temperatureMax)) {
+      if (temperatureMax !== "" && (row.temperature== null || row.temperature > parseFloat(temperatureMax))) {
         return false;
       }
 
       // Added: Humidity filters
-      if (humidityMin !== "" && row.humidity < parseFloat(humidityMin)) {
+      if (humidityMin !== "" && (row.humidity== null || row.humidity < parseFloat(humidityMin))) {
         return false;
       }
-      if (humidityMax !== "" && row.humidity > parseFloat(humidityMax)) {
+      if (humidityMax !== "" && (row.humidity== null || row.humidity > parseFloat(humidityMax))) {
         return false;
       }
 
@@ -162,22 +162,34 @@ const DataSheet = () => {
     {
       header: "Moisture 1 (%)",
       accessorKey: "moisture1",
-      cell: ({ getValue }) => getValue<number>().toFixed(1),
+      cell: ({ getValue }) => {
+        const v = getValue<number | null>();
+        return v == null || Number.isNaN(v) ? "-" : v.toFixed(1);
+      },
     },
     {
       header: "Moisture 2 (%)",
       accessorKey: "moisture2",
-      cell: ({ getValue }) => getValue<number>().toFixed(1),
+      cell: ({ getValue }) => {
+        const v = getValue<number | null>();
+        return v == null || Number.isNaN(v) ? "-" : v.toFixed(1);
+      },
     },
     {
       header: "Temp (°C)",
       accessorKey: "temperature",
-      cell: ({ getValue }) => getValue<number>().toFixed(1),
+      cell: ({ getValue }) => {
+        const v = getValue<number | null>();
+        return v == null || Number.isNaN(v) ? "-" : v.toFixed(1);
+      },
     },
     {
       header: "Humidity (%)",
       accessorKey: "humidity",
-      cell: ({ getValue }) => getValue<number>().toFixed(1),
+      cell: ({ getValue }) => {
+        const v = getValue<number | null>();
+        return v == null || Number.isNaN(v) ? "-" : v.toFixed(1);
+      },
     },
     // {
     //   header: "Battery (%)",
@@ -203,11 +215,11 @@ const DataSheet = () => {
     const csv = Papa.unparse(
       filteredData.map((row) => ({
         Timestamp: format(row.timestamp, "PPPp"),
-        "Moisture 1 (%)": row.moisture1.toFixed(1),
-        "Moisture 2 (%)": row.moisture2.toFixed(1),
-        "Temp (°C)": row.temperature.toFixed(1),
-        "Humidity (%)": row.humidity.toFixed(1),
-        "Battery (%)": row.batteryLevel.toFixed(1),
+        "Moisture 1 (%)": row.moisture1 == null || Number.isNaN(row.moisture1) ? "" : row.moisture1.toFixed(1),
+        "Moisture 2 (%)": row.moisture2 == null || Number.isNaN(row.moisture2) ? "" : row.moisture2.toFixed(1),
+        "Temp (°C)": row.temperature == null ||Number.isNaN(row.temperature) ? "" : row.temperature.toFixed(1),
+        "Humidity (%)": row.humidity == null ||Number.isNaN(row.humidity) ? "" : row.humidity.toFixed(1),
+        "Battery (%)": row.batteryLevel == null ||Number.isNaN(row.batteryLevel) ? "" : row.batteryLevel.toFixed(1),
       }))
     );
 
