@@ -25,6 +25,11 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth0 } from '@auth0/auth0-react';
+import { useAuth0Profile } from '@/hooks/useAuth0Profile';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { User, Phone, Mail, Shield } from 'lucide-react';
+import { StorageDebug } from '@/components/debug/StorageDebug';
 
 // Types for settings
 interface MoistureSettings {
@@ -138,6 +143,10 @@ const DEFAULT_SETTINGS = {
 
 const Settings: React.FC = () => {
   const { toast } = useToast();
+  const { logout } = useAuth0();
+  const { profile, updatePhoneNumber, isUpdating, getUserInitials } = useAuth0Profile();
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [newPhoneNumber, setNewPhoneNumber] = useState(profile?.phone_number || '');
   const [selectedCropId, setSelectedCropId] = useState<string>('custom');
   const [moistureSettings, setMoistureSettings] = useState<MoistureSettings>(DEFAULT_SETTINGS.moistureSettings);
   const [irrigationSettings, setIrrigationSettings] = useState<IrrigationSettings>(DEFAULT_SETTINGS.irrigationSettings);
@@ -163,6 +172,11 @@ const Settings: React.FC = () => {
       }
     }
   }, [toast]);
+
+  // Update phone number state when profile changes
+  useEffect(() => {
+    setNewPhoneNumber(profile?.phone_number || '');
+  }, [profile?.phone_number]);
 
   // Handle crop profile selection
   const handleCropProfileChange = (cropId: string) => {
@@ -340,12 +354,154 @@ const Settings: React.FC = () => {
         </Alert>
       )}
 
-      <Tabs defaultValue="crop-profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="user-profile" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="user-profile">User Profile</TabsTrigger>
           <TabsTrigger value="crop-profile">Crop Profile</TabsTrigger>
           <TabsTrigger value="thresholds">Moisture Thresholds</TabsTrigger>
           <TabsTrigger value="irrigation">Irrigation Control</TabsTrigger>
         </TabsList>
+
+        {/* User Profile Tab */}
+        <TabsContent value="user-profile">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                User Profile
+              </CardTitle>
+              <CardDescription>
+                Manage your account settings and contact information
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* User Info Display */}
+              <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={profile?.picture} alt={profile?.name} />
+                  <AvatarFallback className="text-lg">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold">{profile?.name}</h3>
+                  <p className="text-muted-foreground flex items-center gap-1">
+                    <Mail className="h-4 w-4" />
+                    {profile?.email}
+                  </p>
+                  {profile?.phone_number && (
+                    <p className="text-muted-foreground flex items-center gap-1">
+                      <Phone className="h-4 w-4" />
+                      {profile.phone_number}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Phone Number Management */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base font-medium">Phone Number</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Used for SMS alerts and notifications
+                    </p>
+                  </div>
+                  {!editingPhone ? (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setEditingPhone(true);
+                        setNewPhoneNumber(profile?.phone_number || '');
+                      }}
+                    >
+                      {profile?.phone_number ? 'Edit' : 'Add'} Phone
+                    </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setEditingPhone(false)}
+                        disabled={isUpdating}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        size="sm"
+                        disabled={isUpdating}
+                        onClick={async () => {
+                          if (newPhoneNumber.trim()) {
+                            const success = await updatePhoneNumber(newPhoneNumber.trim());
+                            if (success) {
+                              setEditingPhone(false);
+                              toast({
+                                title: 'Phone number updated',
+                                description: 'Your phone number has been updated successfully.',
+                              });
+                            } else {
+                              toast({
+                                title: 'Update failed',
+                                description: 'Failed to update phone number. Please try again.',
+                                variant: 'destructive',
+                              });
+                            }
+                          }
+                        }}
+                      >
+                        {isUpdating ? 'Saving...' : 'Save'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                {editingPhone && (
+                  <div className="space-y-2">
+                    <Input
+                      type="tel"
+                      placeholder="+1 (555) 123-4567"
+                      value={newPhoneNumber}
+                      onChange={(e) => setNewPhoneNumber(e.target.value)}
+                      disabled={isUpdating}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Account Actions */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Shield className="h-4 w-4" />
+                  <span>Your account is secured with Auth0 authentication</span>
+                </div>
+                
+                <div className="flex justify-between items-center p-4 border rounded-lg">
+                  <div>
+                    <h4 className="font-medium text-destructive">Sign Out</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Sign out of your account safely
+                    </p>
+                  </div>
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => logout({ 
+                      logoutParams: { 
+                        returnTo: window.location.origin 
+                      } 
+                    })}
+                  >
+                    Sign Out
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Debug Component - Remove in production */}
+          {process.env.NODE_ENV === 'development' && <StorageDebug />}
+        </TabsContent>
 
         {/* Crop Profile Tab */}
         <TabsContent value="crop-profile">

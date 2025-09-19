@@ -41,3 +41,64 @@ export const controlMotor = async (turnOn: boolean): Promise<boolean> => {
   // Simulate success response
   return turnOn;
 };
+
+// -----------------------------
+// Notifications API (Backend)
+// -----------------------------
+
+export const updateNotificationPhone = async (params: {
+  userId: string;
+  email: string;
+  name?: string;
+  phone: string;
+}) => {
+  const res = await fetch('http://localhost:5000/api/notifications/user/update-phone', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  return res.json();
+};
+
+export const notifyActivityScheduled = async (params: {
+  activityName: string;
+  activityType: string;
+  date: Date | string;
+  description?: string;
+  cropName?: string;
+  scheduledBy?: string;
+}) => {
+  const res = await fetch('http://localhost:5000/api/notifications/activity/scheduled', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...params,
+      date: typeof params.date === 'string' ? params.date : params.date.toString(),
+    }),
+  });
+  return res.json();
+};
+
+export const notifyActivityCompleted = async (params: {
+  activityName: string;
+  completedBy?: string;
+  completedTime?: Date | string;
+  cropName?: string;
+}) => {
+  const res = await fetch('http://localhost:5000/api/notifications/activity/completed', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...params,
+      completedTime: params.completedTime
+        ? (typeof params.completedTime === 'string' ? params.completedTime : params.completedTime.toString())
+        : new Date().toString(),
+    }),
+  });
+  return res.json();
+};
+
+export const getNotificationStats = async () => {
+  const res = await fetch('http://localhost:5000/api/notifications/stats');
+  return res.json();
+};

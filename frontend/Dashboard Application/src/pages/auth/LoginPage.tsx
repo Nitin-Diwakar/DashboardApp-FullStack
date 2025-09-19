@@ -1,110 +1,98 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
+import { useAuth0 } from '@auth0/auth0-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { Plane as Plant } from 'lucide-react';
-
-const loginSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-});
-
-type LoginValues = z.infer<typeof loginSchema>;
+import { Separator } from '@/components/ui/separator';
+import { Loader2, LogIn, Mail, Phone } from 'lucide-react';
 
 const LoginPage = () => {
-  const { login } = useAuth();
+  const { loginWithRedirect, isAuthenticated, isLoading } = useAuth0();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
-
-  const onSubmit = async (data: LoginValues) => {
-    setIsLoading(true);
-    try {
-      await login(data.email, data.password);
-      toast({
-        title: 'Login successful',
-        description: 'Welcome back to Agri NextGen!',
-      });
-      navigate('/');
-    } catch (error) {
-      toast({
-        title: 'Login failed',
-        description: 'Please check your credentials and try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
     }
+  }, [isAuthenticated, navigate]);
+
+  const handleLogin = async () => {
+    await loginWithRedirect({
+      authorizationParams: {
+        screen_hint: 'login',
+      },
+    });
   };
 
-  return (
-    
-    <div className=" px-5 space-y-6">
-      <div className="flex flex-col space-y-2 text-center">
-        <div className="mx-auto">
-          {/* <Plant className="h-10 w-10 text-green-600" /> */}
+  const handleSignup = async () => {
+    await loginWithRedirect({
+      authorizationParams: {
+        screen_hint: 'signup',
+      },
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-5 space-y-6">
+      <div className="flex flex-col space-y-2 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
         <p className="text-sm text-muted-foreground">
-          Enter your credentials to access your account
+          Sign in to access your Smart Irrigation Dashboard
         </p>
       </div>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="you@example.com"
-            {...register('email')}
-          />
-          {errors.email && (
-            <p className="text-sm text-destructive">{errors.email.message}</p>
-          )}
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <Button variant="link" className="h-auto p-0 text-sm bg-transparent text-black hover:underline dark:text-gray-300" type="button">
-              Forgot password?
-            </Button>
-          </div>
-          <Input
-            id="password"
-            type="password"
-            {...register('password')}
-          />
-          {errors.password && (
-            <p className="text-sm text-destructive">{errors.password.message}</p>
-          )}
-        </div>
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? 'Signing in...' : 'Sign in'}
+      
+      <div className="space-y-4">
+        <Button
+          onClick={handleLogin}
+          className="w-full"
+          size="lg"
+        >
+          <LogIn className="mr-2 h-4 w-4" />
+          Continue with Auth0
         </Button>
-      </form>
+        
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <Separator className="w-full" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Features after login
+            </span>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4" />
+            <span>SMS Alerts</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            <span>Email Notifications</span>
+          </div>
+        </div>
+      </div>
+      
       <div className="text-center text-sm">
-        Don't have an account?{' '}
-        <Link to="/register" className="underline underline-offset-4 hover:text-primary">
-          Sign up
-        </Link>
+        New to Smart Irrigation?{' '}
+        <button 
+          onClick={handleSignup}
+          className="underline underline-offset-4 hover:text-primary"
+        >
+          Create an account
+        </button>
       </div>
     </div>
   );

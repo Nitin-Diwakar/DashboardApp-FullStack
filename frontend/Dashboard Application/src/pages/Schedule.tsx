@@ -43,6 +43,7 @@ import { CalendarIcon, Plus, X, Edit2, Check, Minimize2, CheckCircle2 } from 'lu
 import { format, isBefore, isToday, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, startOfWeek, endOfWeek } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { notifyActivityCompleted, notifyActivityScheduled } from '@/lib/api';
 
 interface IScheduleItem {
   id: string;
@@ -152,6 +153,23 @@ const Schedule = () => {
       title: 'Schedule added',
       description: `${title} has been scheduled for ${format(date, 'PPP')}`,
     });
+
+    // Fire WhatsApp notification (best-effort)
+    notifyActivityScheduled({
+      activityName: title,
+      activityType: activity,
+      date,
+      description,
+      scheduledBy: 'Farmer',
+    }).then((resp) => {
+      if (!resp?.success && (resp?.twilioCode === 63016 || resp?.error === 'WHATSAPP_FREEFORM_WINDOW_CLOSED')) {
+        toast({
+          title: 'WhatsApp session not active',
+          description: 'Open a 24h session by sending a message to the Twilio WhatsApp number, then try again. For Sandbox, send your join code in WhatsApp to the sandbox number.',
+          variant: 'destructive',
+        });
+      }
+    }).catch(() => {});
   };
 
   const handleEditSchedule = () => {
@@ -230,6 +248,24 @@ const Schedule = () => {
       title: 'Activity completed',
       description: 'The activity has been marked as completed',
     });
+
+    // Send completion notification (best-effort)
+    const completed = scheduleItems.find(i => i.id === activityToComplete);
+    if (completed) {
+      notifyActivityCompleted({
+        activityName: completed.title,
+        completedBy: farmerName,
+        completedTime: completionDateTime,
+      }).then((resp) => {
+        if (!resp?.success && (resp?.twilioCode === 63016 || resp?.error === 'WHATSAPP_FREEFORM_WINDOW_CLOSED')) {
+          toast({
+            title: 'WhatsApp session not active',
+            description: 'Open a 24h session by sending a message to the Twilio WhatsApp number, then try again. For Sandbox, send your join code in WhatsApp to the sandbox number.',
+            variant: 'destructive',
+          });
+        }
+      }).catch(() => {});
+    }
   };
 
   const resetForm = () => {

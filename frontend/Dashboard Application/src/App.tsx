@@ -5,7 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { SettingsProvider } from '@/contexts/SettingsContext';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { Auth0Provider } from '@auth0/auth0-react';
+import { auth0ProviderProps, validateAuth0Config } from '@/lib/auth0-config';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { PerformanceMonitor } from '@/components/PerformanceMonitor';
 
@@ -36,6 +37,8 @@ const Schedule = lazy(() => import('@/pages/Schedule'));
 const Activities = lazy(() => import('@/pages/Activities'));
 const DataSheet = lazy(() => import('@/pages/DataSheet'));
 const Settings = lazy(() => import('@/pages/Settings'));
+const CallbackPage = lazy(() => import('@/pages/auth/CallbackPage'));
+const PhoneCollectionPage = lazy(() => import('@/pages/auth/PhoneCollectionPage'));
 
 
 // Create a client with optimized configuration
@@ -70,10 +73,13 @@ const LayoutLoading = () => (
 );
 
 function App() {
+  // Validate Auth0 configuration on app start
+  validateAuth0Config();
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-        <AuthProvider>
+    <Auth0Provider {...auth0ProviderProps}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
           <SettingsProvider>
             <BrowserRouter>
               <Suspense fallback={<LoadingSpinner />}>
@@ -95,7 +101,23 @@ function App() {
                         </Suspense>
                       } 
                     />
+                    <Route 
+                      path="/callback" 
+                      element={
+                        <Suspense fallback={<LayoutLoading />}>
+                          <CallbackPage />
+                        </Suspense>
+                      } 
+                    />
                   </Route>
+                  <Route 
+                    path="/collect-phone" 
+                    element={
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <PhoneCollectionPage />
+                      </Suspense>
+                    } 
+                  />
                   <Route element={<ProtectedRoute />}>
                     <Route element={<DashboardLayout />}>
                       <Route 
@@ -144,7 +166,7 @@ function App() {
               </Suspense>
             </BrowserRouter>
           </SettingsProvider>
-        </AuthProvider>
+        </ThemeProvider>
         <Toaster />
         {/* Performance monitoring for development */}
         {process.env.NODE_ENV === 'development' && (
@@ -155,11 +177,11 @@ function App() {
             }}
           />
         )}
-      </ThemeProvider>
-      {process.env.NODE_ENV === 'development' && (
-        <ReactQueryDevtools initialIsOpen={false} />
-      )}
-    </QueryClientProvider>
+        {process.env.NODE_ENV === 'development' && (
+          <ReactQueryDevtools initialIsOpen={false} />
+        )}
+      </QueryClientProvider>
+    </Auth0Provider>
   );
 }
 

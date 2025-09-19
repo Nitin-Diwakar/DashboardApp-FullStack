@@ -17,7 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth0 } from '@auth0/auth0-react';
+import { useAuth0Profile } from '@/hooks/useAuth0Profile';
 import { ModeToggle } from "@/components/mode-toggle";
 import { cn } from "@/lib/utils";
 import {
@@ -28,7 +29,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const DashboardLayout = () => {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth0();
+  const { profile, getUserInitials } = useAuth0Profile();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<
     { id: number; message: string; read: boolean }[]
@@ -63,8 +65,11 @@ const DashboardLayout = () => {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleLogout = () => {
-    logout();
-    navigate("/login");
+    logout({ 
+      logoutParams: { 
+        returnTo: window.location.origin 
+      } 
+    });
   };
 
   const NavItem = ({
@@ -268,7 +273,29 @@ const DashboardLayout = () => {
             </DropdownMenu>
 
             <ModeToggle />
-            <span className="hidden md:inline text-sm">{user?.name}</span>
+            
+            {/* User Profile Display */}
+            <div className="hidden md:flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {profile?.picture ? (
+                  <img 
+                    src={profile.picture} 
+                    alt={profile.name}
+                    className="h-8 w-8 rounded-full border-2 border-muted"
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
+                    {getUserInitials()}
+                  </div>
+                )}
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{profile?.name}</span>
+                  {profile?.phone_number && (
+                    <span className="text-xs text-muted-foreground">{profile.phone_number}</span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </header>
 

@@ -19,7 +19,14 @@ mongoose.connect(process.env.MONGO_URI, {
 
 // Routes
 const sensorDataRoute = require("./routes/sensorData");
+const auth0Route = require("./routes/auth0");
+const updateUserMetadataRoute = require("./routes/updateUserMetadata");
+const notificationRoute = require("./routes/notifications");
+
 app.use("/api", sensorDataRoute); // Base route = /api/sensor-data
+app.use("/api/auth", auth0Route); // Auth0 user management routes
+app.use("/api", updateUserMetadataRoute); // User metadata update route
+app.use("/api/notifications", notificationRoute); // WhatsApp notification routes
 
 // Start the server
 const PORT = process.env.PORT || 5000;
